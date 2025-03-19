@@ -195,7 +195,7 @@ export default function Map({
     if (mapboxToken) {
       mapboxgl.accessToken = mapboxToken;
     } else {
-      console.error("Mapbox token is not defined");
+      console.log("Mapbox token is not defined");
     }
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current as HTMLElement,
