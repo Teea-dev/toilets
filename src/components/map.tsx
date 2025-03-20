@@ -197,6 +197,7 @@ export default function Map({
     } else {
       console.log("Mapbox token is not defined");
     }
+    mapboxToken;
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current as HTMLElement,
       style: "mapbox://styles/adetokunbo/cm84el8s1002q01sebajs3ril",

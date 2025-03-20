@@ -1,4 +1,5 @@
 "use client"
+import { useEffect } from "react"
 import Map from "./map"
 
 interface DataFormat {
@@ -37,6 +38,13 @@ export default function MapContainer({
     })
     window.dispatchEvent(event)
   }
+
+  // Verify the token is available
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
+      console.error("NEXT_PUBLIC_MAPBOX_TOKEN is not defined in environment variables")
+    }
+  }, [])
 
   return <Map data={data} userPosition={userPosition} handleMarkerClick={handleMarkerClick} />
 }

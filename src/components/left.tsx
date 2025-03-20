@@ -1,12 +1,7 @@
-"use client ";
-import build from "next/dist/build";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "./ui/accordion";
-import { Alert, AlertDescription } from "./ui/alert";
+"use client";
+import { useState, useRef, useEffect } from "react";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 interface DataFormat {
   building: string;
@@ -19,126 +14,153 @@ interface DataFormat {
     };
   };
   coordinates: [number, number];
+  distance: number;
 }
 
-function formatTime(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  }).format(date);
-}
-
-function StatusLabel(status: string) {
-  return (
-    <>
-      <div
-        className={` rounded-lg px-2 py-1 text-sm w-[fit-content]${
-          status === "available"
-            ? "bg-green-500 text-green-50"
-            : status === "unavailable"
-            ? "bg-red-500 text-red-50"
-            : "bg-yellow-500 text-yellow-50"
-        } font-bold  px-2`}
-      >
-        {status}
-      </div>
-    </>
-  );
-}
-
-function StatusIndicator(status: string) {
-  return (
-    <div
-      className={`h-2 w-2 rounded-full 
-            ${status === "unavailable" && "bg-red-400"}
-            ${status === "available" && "bg-green-400"}
-            ${status === "upcoming" && "bg-amber-400"}
-                `}
-    ></div>
-  );
-}
-
-const date = new Date();
-const day = date.getDay();
-
-export default function Left({
+export default function Map({
   data,
-  activeBuilding,
-  setActiveBuilding,
+  userPosition,
+  handleMarkerClick,
 }: {
   data: DataFormat[];
-  activeBuilding: string;
-  setActiveBuilding: (building: string) => void;
+  userPosition: [number, number];
+  handleMarkerClick: (building: string) => void;
 }) {
-  if (data.length === 0) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Alert className="mx-auto w-fit text-center">
-          <AlertDescription>No data available</AlertDescription>
-        </Alert>
-      </div>
-    );
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const [center, setCenter] = useState<[number, number]>([0, 0]);
+  const [zoom, setZoom] = useState<number>(15);
+  const [pitch, setPitch] = useState<number>(0);
+  const [mapInitialized, setMapInitialized] = useState(false);
+
+  // Get the token directly from the environment variable
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  function getColorByStatus(status: string) {
+    switch (status) {
+      case "open":
+        return "h-2 w-2 rounded-full bg-green-400 shadow-[0px_0px_4px_2px_rgba(34,197,94,0.7)]";
+
+      case "closed":
+        return "h-2 w-2 rounded-full bg-red-400 shadow-[0px_0px_4px_2px_rgba(239,68,68,0.9)]";
+
+      case "unknown":
+        return "h-2 w-2 rounded-full bg-amber-400 shadow-[0px_0px_4px_2px_rgba(245,158,11,0.9)]";
+
+      default:
+        return "gray";
+    }
   }
+
+  // Initialize the map
+  useEffect(() => {
+    if (!mapboxToken) {
+      console.error("Mapbox token is not defined");
+      return;
+    }
+
+    // Set the token explicitly
+    mapboxgl.accessToken = mapboxToken;
+
+    // Check if the container is available
+    if (!mapContainerRef.current) {
+      console.error("Map container is not available");
+      return;
+    }
+
+    // Initialize the map
+    try {
+      mapRef.current = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/adetokunbo/cm84el8s1002q01sebajs3ril",
+        center: center,
+        zoom: zoom,
+        pitch: pitch,
+      });
+
+      mapRef.current.on("load", () => {
+        setMapInitialized(true);
+      });
+
+      mapRef.current.on("move", () => {
+        if (mapRef.current) {
+          const mapCenter = mapRef.current.getCenter();
+          const mapZoom = mapRef.current.getZoom();
+          const mapPitch = mapRef.current.getPitch();
+          setZoom(mapZoom);
+          setPitch(mapPitch);
+          setCenter([mapCenter.lng, mapCenter.lat]);
+        }
+      });
+
+      return () => {
+        mapRef.current?.remove();
+      };
+    } catch (error) {
+      console.error("Error initializing map:", error);
+    }
+  }, [mapboxToken]); // Only re-run if the token changes
+
+  // Add markers after the map is initialized
+  useEffect(() => {
+    if (!mapInitialized || !mapRef.current) return;
+
+    // Add building markers
+    data.forEach((building) => {
+      const el = document.createElement("div");
+      el.className = getColorByStatus(building.building_status);
+      el.addEventListener("click", () => {
+        const accordionItem = document.getElementById(building.building_code);
+        setTimeout(() => {
+          accordionItem?.scrollIntoView({ behavior: "smooth" });
+        }, 500);
+        handleMarkerClick(building.building_code);
+      });
+
+      new mapboxgl.Marker(el)
+        .setLngLat([building.coordinates[0], building.coordinates[1]])
+        .addTo(mapRef.current!);
+    });
+
+    // Add user position marker
+    if (userPosition && userPosition[0] !== 0 && userPosition[1] !== 0) {
+      const e2 = document.createElement("div");
+      e2.className =
+        "h-3 w-3 border-[1.5px] border-zinc-50 rounded-full bg-blue-400 shadow-[0px_0px_4px_2px_rgba(14,165,233,1)]";
+
+      new mapboxgl.Marker(e2)
+        .setLngLat([userPosition[1], userPosition[0]])
+        .addTo(mapRef.current);
+    }
+  }, [mapInitialized, data, userPosition]);
+
   return (
-    <div className="px-8">
-      {day === 0 ? (
-        <Alert className="mx-auto w-fit text-center">Today is Sunday</Alert>
-      ) : null}
-      <Accordion
-        type="single"
-        collapsible
-        className="w-full"
-        value={activeBuilding || ""}
-        onValueChange={(value) => setActiveBuilding(value)}
-      >
-        {data.map((building) => (
-          <AccordionItem
-            key={building.building_code}
-            id={building.building_code}
-            value={building.building_code}
-          >
-            <AccordionTrigger>
-              <div className=" flex justify-between w-[95%] text-left text-lg group items-center">
-                <div className="">
-                  {building.building_code} - {building.building}
-                </div>
-                <div>{StatusLabel(building.building_status)}</div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="divide-y didvide-dashed ">
-              {building.rooms &&
-                Object.entries(building.rooms).map(([roomNumber, room]) => {
-                  return (
-                    <>
-                      <div
-                        key={roomNumber}
-                        className="flex justify-between items-center py-2"
-                      >
-                        <div className="flex gap-4 items-center h-[fit-content]">
-                          <div className="w-18">
-                            {building.building_code} {roomNumber}
-                          </div>
-                          <div className="relative">
-                            {StatusIndicator(room.slot[0].status)}
-                          </div>
-                          <ul className="text-right">
-                            {room.slot.map((slot, index) => (
-                              <li key={index}>
-                                {formatTime(new Date(slot.openTime))} -{" "}
-                                {formatTime(new Date(slot.closeTime))}{" "}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+    <div className="h-[60vh] sm:w-full sm:h-full relative bg-red-500/0 rounded-[20px] p-2 sm:p-0">
+      <div
+        id="map-container"
+        ref={mapContainerRef}
+        className="h-full w-full rounded-[20px] opacity-100"
+      />
+      <div className="bg-[#18181b]/90 absolute bottom-10 left-2 sm:bottom-8 sm:left-0 flex flex-col gap-2 m-1 py-2.5 p-2 rounded-[16px]">
+        <div className="flex items-center gap-0">
+          <div className="h-2 w-2 rounded-full bg-red-400 flex-none"></div>
+          <div className="ml-2 rounded-lg px-2 py-1 text-sm w-full bg-red-700/30 text-red-300/90">
+            unavailable
+          </div>
+        </div>
+        <div className="flex items-center gap-0">
+          <div className="h-2 w-2 rounded-full bg-amber-400 flex-none"></div>
+          <div className="ml-2 rounded-lg px-2 py-1 text-sm w-full bg-amber-800/30 text-amber-300/90">
+            opening soon
+          </div>
+        </div>
+        <div className="flex items-center gap-0">
+          <div className="h-2 w-2 rounded-full bg-green-400 flex-none"></div>
+          <div className="ml-2 rounded-lg px-2 py-1 text-sm w-full bg-green-800/30 text-green-300/90">
+            open now
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
