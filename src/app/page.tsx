@@ -96,7 +96,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-col sm:flex-row sm:gap-4 h-screen">
-      <div className="basis-2/5  sm-h-full order-last sm:order-first py-4 sm:px-0 sm:py-2 overflow-hidden sm:flex sm:flex-col ">
+      <div className="basis-2/5  sm-h-full order-last sm:order-first py-4 sm:px-0 sm:py-2 bg-[#18181b]/90 overflow-hidden sm:flex sm:flex-col ">
         <div className="w-full h-20 pl-8 pr-4 hidden sm:flex sm:justify-between items-center">
           <Popover>
             <PopoverTrigger>

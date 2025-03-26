@@ -135,7 +135,7 @@ export default function Map({
   }, [mapInitialized, data, userPosition]);
 
   return (
-    <div className="h-[60vh] sm:w-full sm:h-full relative bg-red-500/0 rounded-[20px] p-2 sm:p-0">
+    <div className="h-[60vh] sm:w-full sm:h-full relative  rounded-[20px] p-2 sm:p-0 bg-[#18181b]/90">
       <div
         id="map-container"
         ref={mapContainerRef}
