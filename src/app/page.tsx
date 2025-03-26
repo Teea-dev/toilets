@@ -135,12 +135,12 @@ export default function Home() {
                   Toilet access may be restricted to specific colleges or
                   departments
                 </li>
-                {/* <li>
+                 <li>
                   Displayed availability only reflects official class schedules
-                </li> */}
-                {/* <li>
+                </li> 
+                <li>
                   Rooms may be occupied by unofficial meetings or study groups
-                </li> */}
+                </li> 
                 <li>Click on indicators to view toilets for that building</li>
               </ul>
             </PopoverContent>
